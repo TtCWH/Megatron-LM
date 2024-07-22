@@ -10,6 +10,7 @@ from megatron.core.datasets.megatron_tokenizer import MegatronTokenizer
 from .bert_tokenization import FullTokenizer as FullBertTokenizer
 from .gpt2_tokenization import GPT2Tokenizer
 from .tik_tokenization import TikTokenizer
+from .qwen2_tokenization import Qwen2Tokenizer
 
 
 def build_tokenizer(args):
@@ -33,6 +34,11 @@ def build_tokenizer(args):
         assert args.vocab_file is not None
         assert args.merge_file is not None
         tokenizer = _GPT2BPETokenizer(args.vocab_file, args.merge_file)
+    elif args.tokenizer_type == 'Qwen2Tokenizer':
+        assert args.vocab_file is not None
+        assert args.merge_file is not None
+        assert args.tokenizer_model is not None
+        tokenizer = _Qwen2Tokenizer(args.tokenizer_model, args.vocab_file, args.merge_file)
     elif args.tokenizer_type == 'SentencePieceTokenizer':
         assert args.tokenizer_model is not None
         tokenizer = _SentencePieceTokenizer(args.tokenizer_model, vocab_extra_ids=args.vocab_extra_ids)
@@ -213,6 +219,47 @@ class _GPT2BPETokenizer(MegatronTokenizer):
         self.tokenizer = GPT2Tokenizer(vocab_file, merge_file, errors='replace',
                                        special_tokens=[], max_len=None)
         self.eod_id = self.tokenizer.encoder['<|endoftext|>']
+
+    @property
+    def vocab_size(self):
+        return len(self.tokenizer.encoder)
+
+    @property
+    def vocab(self):
+        return self.tokenizer.encoder
+
+    @property
+    def inv_vocab(self):
+        return self.tokenizer.decoder
+
+    def tokenize(self, text):
+        return self.tokenizer.encode(text)
+
+    def detokenize(self, token_ids):
+        return self.tokenizer.decode(token_ids)
+
+    @property
+    def eod(self):
+        return self.eod_id
+
+class _Qwen2Tokenizer(MegatronTokenizer):
+    """Qwen2 tokenizer."""
+
+    def __init__(self, tokenizer_path, vocab_file, merge_file):
+        super().__init__(vocab_file, merge_file)
+        from transformers import AutoTokenizer
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True)
+
+        self.tokenizer = Qwen2Tokenizer(
+                            vocab_file,
+                            merge_file,
+                            errors="replace",
+                            unk_token=tokenizer.unk_token,
+                            bos_token=tokenizer.bos_token,
+                            eos_token=tokenizer.eos_token,
+                            pad_token=tokenizer.pad_token
+                        )
+        self.eod_id = self.tokenizer.pad_token_id
 
     @property
     def vocab_size(self):

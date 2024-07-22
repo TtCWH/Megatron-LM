@@ -94,6 +94,11 @@ def model_provider(pre_process=True, post_process=True) -> Union[GPTModel, megat
             post_process=post_process,
         )
 
+    print_rank_0('====mode params shape====')
+    for name, param in model.named_parameters():
+        print_rank_0('{}\t{}'.format(name, str(param.shape)))  
+    print_rank_0('====mode params shape====')
+
     return model
 
 
