@@ -93,12 +93,10 @@ def model_provider(pre_process=True, post_process=True) -> Union[GPTModel, megat
             pre_process=pre_process,
             post_process=post_process,
         )
-
     print_rank_0('====mode params shape====')
     for name, param in model.named_parameters():
         print_rank_0('{}\t{}'.format(name, str(param.shape)))  
     print_rank_0('====mode params shape====')
-
     return model
 
 
@@ -397,12 +395,20 @@ if __name__ == "__main__":
     train_valid_test_datasets_provider.is_distributed = True
     extra_valid_datasets_provider.is_distributed = True
 
-    pretrain(
-        train_valid_test_datasets_provider,
-        model_provider,
-        ModelType.encoder_or_decoder,
-        forward_step,
-        args_defaults={'tokenizer_type': 'GPT2BPETokenizer'},
-        extra_args_provider=add_extra_args,
-        extra_valid_data_iterators_builder=partial(build_extra_valid_data_iterators, extra_valid_datasets_provider=extra_valid_datasets_provider),
-        )
+    try:
+        pretrain(
+            train_valid_test_datasets_provider,
+            model_provider,
+            ModelType.encoder_or_decoder,
+            forward_step,
+            args_defaults={'tokenizer_type': 'GPT2BPETokenizer'},
+            extra_args_provider=add_extra_args,
+            extra_valid_data_iterators_builder=partial(build_extra_valid_data_iterators, extra_valid_datasets_provider=extra_valid_datasets_provider),
+            )
+    # except ChildFailedError as e:
+    #     _, failure = e.get_first_failure()
+    #     error_handler.dump_error_file(failure.error_file, failure.exitcode)
+    #     raise
+    except Exception as e:
+        # error_handler.record(e)
+        raise
